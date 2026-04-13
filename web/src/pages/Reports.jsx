@@ -28,7 +28,7 @@ export default function Reports() {
       try {
         const [monthlyRes, ccRes] = await Promise.all([
           api.get(`/reports/monthly?year=${year}`).catch(() => ({ data: [] })),
-          api.get('/reports/cost-centers').catch(() => ({ data: [] })),
+          api.get('/reports/cost-center-comparison').catch(() => ({ data: [] })),
         ]);
         setSummary(monthlyRes.data || []);
         setCostCenterData(ccRes.data || []);

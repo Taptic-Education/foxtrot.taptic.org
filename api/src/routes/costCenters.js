@@ -7,6 +7,28 @@ const { writeLimiter } = require('../middleware/security');
 
 const router = express.Router();
 
+// GET /api/cost-centers/mine - get cost centers for current user (alias)
+router.get('/mine', authMiddleware, async (req, res) => {
+  try {
+    const owned = await prisma.costCenterOwner.findMany({
+      where: { userId: req.user.id },
+      include: {
+        costCenter: {
+          include: {
+            owners: {
+              include: { user: { select: { id: true, name: true, email: true } } }
+            }
+          }
+        }
+      }
+    });
+    res.json(owned.map(o => o.costCenter));
+  } catch (err) {
+    console.error('Get mine cost centers error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/cost-centers - list cost centers
 router.get('/', authMiddleware, async (req, res) => {
   try {

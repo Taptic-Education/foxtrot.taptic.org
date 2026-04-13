@@ -336,7 +336,7 @@ function TopUpModal({ isOpen, onClose, onSuccess }) {
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      await api.post('/transactions/topup', { amount: parseFloat(amount), description });
+      await api.post('/transactions/top-up', { amount: parseFloat(amount), description });
       onSuccess();
       onClose();
       setStep(1);

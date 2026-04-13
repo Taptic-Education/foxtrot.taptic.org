@@ -15,6 +15,7 @@ const auditRoutes = require('./routes/audit');
 const reportRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
 const setupRoutes = require('./routes/setup');
+const dashboardRoutes = require('./routes/dashboard');
 const { csrfProtection, apiLimiter } = require('./middleware/security');
 
 const app = express();
@@ -45,6 +46,7 @@ app.use('/api/audit-log', auditRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/setup', setupRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 

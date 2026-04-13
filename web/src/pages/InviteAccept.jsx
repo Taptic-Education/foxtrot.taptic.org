@@ -40,7 +40,7 @@ export default function InviteAccept() {
     setIsLoading(true);
     setError('');
     try {
-      await api.post('/auth/accept-invite', { token, name: data.name, password: data.password });
+      await api.post('/auth/invite/accept', { token, name: data.name, password: data.password });
       navigate('/login');
     } catch (e) {
       setError(e.response?.data?.error || 'Failed to accept invite. Link may be expired.');
