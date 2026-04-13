@@ -76,6 +76,7 @@ router.post('/', authMiddleware, writeLimiter, async (req, res) => {
     beneficiaryName: z.string().min(1).optional(),
     beneficiaryBank: z.string().min(1).optional(),
     beneficiaryAccount: z.string().min(1).optional(),
+    beneficiaryBranchCode: z.string().min(1).optional(),
     beneficiaryRef: z.string().optional()
   });
 
@@ -83,7 +84,7 @@ router.post('/', authMiddleware, writeLimiter, async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
   try {
-    const { costCenterId, amount, justification, urgency, beneficiaryName, beneficiaryBank, beneficiaryAccount, beneficiaryRef } = parsed.data;
+    const { costCenterId, amount, justification, urgency, beneficiaryName, beneficiaryBank, beneficiaryAccount, beneficiaryBranchCode, beneficiaryRef } = parsed.data;
 
     if (req.user.role !== 'super_admin') {
       const isOwner = await prisma.costCenterOwner.findFirst({
@@ -107,6 +108,7 @@ router.post('/', authMiddleware, writeLimiter, async (req, res) => {
         beneficiaryName: beneficiaryName || null,
         beneficiaryBank: beneficiaryBank || null,
         beneficiaryAccount: beneficiaryAccount || null,
+        beneficiaryBranchCode: beneficiaryBranchCode || null,
         beneficiaryRef: beneficiaryRef || null
       },
       include: {

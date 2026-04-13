@@ -56,6 +56,7 @@ export default function FundRequests() {
         beneficiaryName: data.beneficiaryName || undefined,
         beneficiaryBank: data.beneficiaryBank || undefined,
         beneficiaryAccount: data.beneficiaryAccount || undefined,
+        beneficiaryBranchCode: data.beneficiaryBranchCode || undefined,
         beneficiaryRef: data.beneficiaryRef || undefined,
       });
       addToast('Fund request submitted');
@@ -184,9 +185,13 @@ export default function FundRequests() {
                 <input className="input-field" {...register('beneficiaryBank')} placeholder="e.g. FNB, Standard Bank" />
               </div>
               <div className="input-group">
-                <label className="input-label">Account Number</label>
-                <input className="input-field" {...register('beneficiaryAccount')} placeholder="Account number" />
+                <label className="input-label">Branch Code</label>
+                <input className="input-field" {...register('beneficiaryBranchCode')} placeholder="e.g. 250655" />
               </div>
+            </div>
+            <div className="input-group">
+              <label className="input-label">Account Number</label>
+              <input className="input-field" {...register('beneficiaryAccount')} placeholder="Account number" />
             </div>
             <div className="input-group">
               <label className="input-label">Payment Reference</label>
@@ -230,6 +235,7 @@ export default function FundRequests() {
                 <strong>Payment Details</strong><br />
                 <span>Pay to: {confirmAction.request.beneficiaryName}</span><br />
                 {confirmAction.request.beneficiaryBank && <><span>Bank: {confirmAction.request.beneficiaryBank}</span><br /></>}
+                {confirmAction.request.beneficiaryBranchCode && <><span>Branch Code: {confirmAction.request.beneficiaryBranchCode}</span><br /></>}
                 {confirmAction.request.beneficiaryAccount && <><span>Account: {confirmAction.request.beneficiaryAccount}</span><br /></>}
                 {confirmAction.request.beneficiaryRef && <span>Ref: {confirmAction.request.beneficiaryRef}</span>}
               </div>

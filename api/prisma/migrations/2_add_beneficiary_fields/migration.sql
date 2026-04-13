@@ -2,4 +2,5 @@
 ALTER TABLE "fund_requests" ADD COLUMN "beneficiary_name" TEXT;
 ALTER TABLE "fund_requests" ADD COLUMN "beneficiary_bank" TEXT;
 ALTER TABLE "fund_requests" ADD COLUMN "beneficiary_account" TEXT;
+ALTER TABLE "fund_requests" ADD COLUMN "beneficiary_branch_code" TEXT;
 ALTER TABLE "fund_requests" ADD COLUMN "beneficiary_ref" TEXT;

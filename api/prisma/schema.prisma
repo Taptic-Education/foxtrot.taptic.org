@@ -156,6 +156,7 @@ model FundRequest {
   beneficiaryName        String?           @map("beneficiary_name")
   beneficiaryBank        String?           @map("beneficiary_bank")
   beneficiaryAccount     String?           @map("beneficiary_account")
+  beneficiaryBranchCode  String?           @map("beneficiary_branch_code")
   beneficiaryRef         String?           @map("beneficiary_ref")
   status                 FundRequestStatus @default(pending)
   reviewedBy             String?           @map("reviewed_by")
