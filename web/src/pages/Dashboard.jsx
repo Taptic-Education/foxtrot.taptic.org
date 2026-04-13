@@ -669,7 +669,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {auth.user?.role === 'SUPER_ADMIN' ? <SuperAdminDashboard /> : <OwnerDashboard />}
+      {auth.user?.role === 'super_admin' ? <SuperAdminDashboard /> : <OwnerDashboard />}
     </motion.div>
   );
 }

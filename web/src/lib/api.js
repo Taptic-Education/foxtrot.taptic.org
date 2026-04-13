@@ -21,6 +21,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Don't attempt refresh for auth-check endpoints — let callers handle the error
+    const skipRefreshUrls = ['/auth/me', '/auth/microsoft/status'];
+    if (skipRefreshUrls.some((u) => originalRequest.url?.endsWith(u))) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -39,7 +45,11 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        window.location.href = '/login';
+        // Only redirect if not already on a public page
+        const path = window.location.pathname;
+        if (!['/login', '/setup', '/forgot-password', '/reset-password', '/invite/accept'].some((p) => path.startsWith(p))) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

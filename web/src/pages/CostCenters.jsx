@@ -93,7 +93,7 @@ export default function CostCenters() {
     >
       <div className="page-header">
         <h1 className="page-title">Cost Centers</h1>
-        {auth.user?.role === 'SUPER_ADMIN' && (
+        {auth.user?.role === 'super_admin' && (
           <button className="btn" onClick={() => setCreateModal(true)}>
             <Plus size={14} /> New Cost Center
           </button>

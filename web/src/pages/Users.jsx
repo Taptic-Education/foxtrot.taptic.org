@@ -20,7 +20,7 @@ const pageVariants = {
 const inviteSchema = z.object({
   email: z.string().email('Invalid email'),
   name: z.string().min(2, 'Name is required'),
-  role: z.enum(['SUPER_ADMIN', 'COST_CENTER_OWNER']),
+  role: z.enum(['super_admin', 'cost_center_owner']),
 });
 
 export default function Users() {
@@ -33,7 +33,7 @@ export default function Users() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(inviteSchema),
-    defaultValues: { role: 'COST_CENTER_OWNER' },
+    defaultValues: { role: 'cost_center_owner' },
   });
 
   const fetchUsers = async () => {
@@ -156,8 +156,8 @@ export default function Users() {
           <div className="input-group">
             <label className="input-label">Role</label>
             <select className="input-field" {...register('role')}>
-              <option value="COST_CENTER_OWNER">Cost Center Owner</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="cost_center_owner">Cost Center Owner</option>
+              <option value="super_admin">Super Admin</option>
             </select>
           </div>
 

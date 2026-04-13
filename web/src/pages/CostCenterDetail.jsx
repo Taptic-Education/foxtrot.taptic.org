@@ -55,7 +55,7 @@ export default function CostCenterDetail() {
 
   useEffect(() => {
     fetchData();
-    if (auth.user?.role === 'SUPER_ADMIN') fetchUsers();
+    if (auth.user?.role === 'super_admin') fetchUsers();
   }, [id]);
 
   const onAddOwner = async (data) => {
@@ -120,7 +120,7 @@ export default function CostCenterDetail() {
             <span className={`badge ${getStatusBadgeClass(cc.status)}`}>{cc.status}</span>
           )}
         </div>
-        {auth.user?.role === 'SUPER_ADMIN' && (
+        {auth.user?.role === 'super_admin' && (
           <button className="btn" onClick={() => setAddOwnerModal(true)}>
             <UserPlus size={14} /> Add Owner
           </button>

@@ -94,7 +94,7 @@ export default function FundRequests() {
       key: 'amount', label: 'Amount', isAmount: true, align: 'right',
       render: (v) => <span className="amount">{formatCurrency(v)}</span>,
     },
-    ...(auth.user?.role === 'SUPER_ADMIN' ? [{
+    ...(auth.user?.role === 'super_admin' ? [{
       key: 'actions', label: '', sortable: false,
       render: (_, row) => row.status === 'PENDING' ? (
         <div style={{ display: 'flex', gap: 8 }}>
@@ -125,7 +125,7 @@ export default function FundRequests() {
     >
       <div className="page-header">
         <h1 className="page-title">Fund Requests</h1>
-        {auth.user?.role !== 'SUPER_ADMIN' && (
+        {auth.user?.role !== 'super_admin' && (
           <button className="btn" onClick={() => setCreateModal(true)}>
             <Plus size={14} /> New Request
           </button>
