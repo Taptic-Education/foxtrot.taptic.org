@@ -23,6 +23,7 @@ export default function FundRequests() {
   const [confirmAction, setConfirmAction] = useState(null); // { request, action: 'approve'|'reject' }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [costCenters, setCostCenters] = useState([]);
+  const [reviewNote, setReviewNote] = useState('');
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
@@ -48,7 +49,8 @@ export default function FundRequests() {
       await api.post('/fund-requests', {
         costCenterId: data.costCenterId,
         amount: parseFloat(data.amount),
-        reason: data.reason,
+        justification: data.reason,
+        urgency: data.urgency || 'medium',
       });
       addToast('Fund request submitted');
       setCreateModal(false);
@@ -69,9 +71,11 @@ export default function FundRequests() {
       const endpoint = confirmAction.action === 'approve'
         ? `/fund-requests/${confirmAction.request.id}/approve`
         : `/fund-requests/${confirmAction.request.id}/reject`;
-      await api.patch(endpoint);
+      const body = confirmAction.action === 'reject' ? { reviewNote: reviewNote || 'Rejected' } : {};
+      await api.patch(endpoint, body);
       addToast(`Request ${confirmAction.action}d`);
       setConfirmAction(null);
+      setReviewNote('');
       fetchRequests();
       fetchNotifications();
     } catch (e) {
@@ -84,8 +88,8 @@ export default function FundRequests() {
   const columns = [
     { key: 'createdAt', label: 'Date', render: (v) => formatDate(v) },
     { key: 'costCenter', label: 'Cost Center', render: (v, row) => row.costCenter?.name || '—' },
-    { key: 'requestedBy', label: 'Requested By', render: (v, row) => row.requestedBy?.name || '—' },
-    { key: 'reason', label: 'Reason' },
+    { key: 'requester', label: 'Requested By', render: (v, row) => row.requester?.name || '—' },
+    { key: 'justification', label: 'Reason' },
     {
       key: 'status', label: 'Status',
       render: (v) => <span className={`badge ${getStatusBadgeClass(v)}`}>{v}</span>,
@@ -96,7 +100,7 @@ export default function FundRequests() {
     },
     ...(auth.user?.role === 'super_admin' ? [{
       key: 'actions', label: '', sortable: false,
-      render: (_, row) => row.status === 'PENDING' ? (
+      render: (_, row) => row.status === 'pending' ? (
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className="btn btn-sm"
@@ -160,6 +164,14 @@ export default function FundRequests() {
             <label className="input-label">Reason</label>
             <textarea className="input-field" {...register('reason', { required: true })} placeholder="Why are funds needed?" />
           </div>
+          <div className="input-group">
+            <label className="input-label">Urgency</label>
+            <select className="input-field" {...register('urgency')}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-ghost" onClick={() => { setCreateModal(false); reset(); }}>Cancel</button>
             <button type="submit" className="btn" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Submit Request'}</button>
@@ -170,10 +182,25 @@ export default function FundRequests() {
       {/* Approve/Reject Confirm */}
       <ConfirmModal
         isOpen={!!confirmAction}
-        onClose={() => setConfirmAction(null)}
+        onClose={() => { setConfirmAction(null); setReviewNote(''); }}
         onConfirm={handleApproveReject}
         title={confirmAction?.action === 'approve' ? 'Approve Request' : 'Reject Request'}
-        message={`${confirmAction?.action === 'approve' ? 'Approve' : 'Reject'} fund request from ${confirmAction?.request?.requestedBy?.name || 'user'}?`}
+        message={
+          <div>
+            <div>{`${confirmAction?.action === 'approve' ? 'Approve' : 'Reject'} fund request from ${confirmAction?.request?.requester?.name || 'user'}?`}</div>
+            {confirmAction?.action === 'reject' && (
+              <div className="input-group" style={{ marginTop: 16 }}>
+                <label className="input-label">Reason for rejection</label>
+                <textarea
+                  className="input-field"
+                  value={reviewNote}
+                  onChange={(e) => setReviewNote(e.target.value)}
+                  placeholder="Explain why this request is being rejected..."
+                />
+              </div>
+            )}
+          </div>
+        }
         amount={confirmAction?.request?.amount}
         confirmLabel={confirmAction?.action === 'approve' ? 'Approve' : 'Reject'}
         isDanger={confirmAction?.action === 'reject'}

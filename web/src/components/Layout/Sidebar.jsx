@@ -17,6 +17,7 @@ import {
   Moon,
   Menu,
   X,
+  Clock,
 } from 'lucide-react';
 import { useStore } from '../../lib/store';
 
@@ -31,6 +32,7 @@ const navItems = (role, notifications) => {
   if (role === 'super_admin') {
     items.push(
       { to: '/payments', label: 'Payments', icon: CreditCard, badge: notifications.pendingPayments },
+      { to: '/scheduled-transfers', label: 'Schedules', icon: Clock },
       { to: '/reports', label: 'Reports', icon: BarChart3 },
       { to: '/audit-log', label: 'Audit Log', icon: ScrollText },
       { to: '/users', label: 'Users', icon: Users },

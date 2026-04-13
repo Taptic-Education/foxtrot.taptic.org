@@ -28,6 +28,7 @@ export default function Users() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteModal, setInviteModal] = useState(false);
+  const [inviteLinkModal, setInviteLinkModal] = useState(null);
   const [deactivateUser, setDeactivateUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,7 +40,11 @@ export default function Users() {
   const fetchUsers = async () => {
     try {
       const res = await api.get('/users');
-      setUsers(res.data.data || res.data || []);
+      const raw = res.data.data || res.data || [];
+      setUsers(raw.map(u => ({
+        ...u,
+        status: u.isActive ? 'active' : 'inactive',
+      })));
     } catch {
       addToast('Failed to load users', 'error');
     } finally {
@@ -52,10 +57,13 @@ export default function Users() {
   const onInvite = async (data) => {
     setIsSubmitting(true);
     try {
-      await api.post('/users/invite', data);
+      const res = await api.post('/users/invite', data);
       addToast(`Invite sent to ${data.email}`);
       setInviteModal(false);
       reset();
+      if (res.data.inviteLink) {
+        setInviteLinkModal(res.data.inviteLink);
+      }
       fetchUsers();
     } catch (e) {
       addToast(e.response?.data?.error || 'Failed to send invite', 'error');
@@ -67,7 +75,7 @@ export default function Users() {
   const onDeactivate = async () => {
     setIsSubmitting(true);
     try {
-      await api.patch(`/users/${deactivateUser.id}/deactivate`);
+      await api.delete(`/users/${deactivateUser.id}`);
       addToast('User deactivated');
       setDeactivateUser(null);
       fetchUsers();
@@ -179,6 +187,31 @@ export default function Users() {
         isDanger
         isLoading={isSubmitting}
       />
+
+      {/* Invite Link Modal */}
+      <Modal isOpen={!!inviteLinkModal} onClose={() => setInviteLinkModal(null)} title="Invite Link">
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 16 }}>
+          Share this link with the user so they can set up their account. The link expires in 48 hours.
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            className="input-field"
+            readOnly
+            value={inviteLinkModal || ''}
+            onFocus={(e) => e.target.select()}
+            style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+          />
+          <button
+            className="btn"
+            onClick={() => {
+              navigator.clipboard.writeText(inviteLinkModal);
+              addToast('Link copied to clipboard');
+            }}
+          >
+            Copy
+          </button>
+        </div>
+      </Modal>
     </motion.div>
   );
 }

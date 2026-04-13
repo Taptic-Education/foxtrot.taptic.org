@@ -34,6 +34,7 @@ model User {
   auditLogs            AuditLog[]
   updatedSettings      Setting[]
   refreshTokens        RefreshToken[]
+  scheduledTransfers   ScheduledTransfer[]
 
   @@map("users")
 }
@@ -69,6 +70,8 @@ model CostCenter {
   outgoingTransactions Transaction[]     @relation("FromCostCenter")
   incomingTransactions Transaction[]     @relation("ToCostCenter")
   fundRequests         FundRequest[]
+  scheduledOutgoing    ScheduledTransfer[] @relation("ScheduledFrom")
+  scheduledIncoming    ScheduledTransfer[] @relation("ScheduledTo")
 
   @@map("cost_centers")
 }
@@ -202,4 +205,30 @@ model Setting {
   updater   User?    @relation(fields: [updatedBy], references: [id])
 
   @@map("settings")
+}
+
+model ScheduledTransfer {
+  id               String            @id @default(uuid())
+  fromCostCenterId String            @map("from_cost_center_id")
+  toCostCenterId   String            @map("to_cost_center_id")
+  amount           Decimal           @db.Decimal(15, 2)
+  description      String
+  frequency        TransferFrequency
+  nextRunAt        DateTime          @map("next_run_at")
+  isActive         Boolean           @default(true) @map("is_active")
+  createdBy        String            @map("created_by")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  fromCostCenter   CostCenter        @relation("ScheduledFrom", fields: [fromCostCenterId], references: [id])
+  toCostCenter     CostCenter        @relation("ScheduledTo", fields: [toCostCenterId], references: [id])
+  creator          User              @relation(fields: [createdBy], references: [id])
+
+  @@map("scheduled_transfers")
+}
+
+enum TransferFrequency {
+  daily
+  weekly
+  monthly
 }

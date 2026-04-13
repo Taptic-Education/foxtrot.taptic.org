@@ -58,6 +58,12 @@ router.post('/login', authLimiter, async (req, res) => {
   const { email, password } = parsed.data;
 
   try {
+    // Check if SSO-only mode is enabled
+    const forceSso = await prisma.setting.findUnique({ where: { key: 'force_sso_only' } });
+    if (forceSso?.value === 'true') {
+      return res.status(403).json({ error: 'Password login is disabled. Please use Microsoft SSO to sign in.' });
+    }
+
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (!user || !user.isActive) return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -377,13 +383,78 @@ router.get('/microsoft/callback', async (req, res) => {
   }
 });
 
+// PUT /api/auth/profile - update own profile
+router.put('/profile', authMiddleware, async (req, res) => {
+  const schema = z.object({
+    name: z.string().min(1).optional(),
+    email: z.string().email().optional()
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
+
+  try {
+    const updateData = {};
+    if (parsed.data.name) updateData.name = parsed.data.name;
+    if (parsed.data.email) {
+      const existing = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
+      if (existing && existing.id !== req.user.id) {
+        return res.status(409).json({ error: 'Email already in use' });
+      }
+      updateData.email = parsed.data.email.toLowerCase();
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updateData,
+      select: { id: true, email: true, name: true, role: true }
+    });
+
+    await logAudit(req.user.id, 'PROFILE_UPDATED', 'user', req.user.id, updateData, getClientIp(req));
+    res.json(user);
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/auth/password - change own password
+router.put('/password', authMiddleware, async (req, res) => {
+  const schema = z.object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(8)
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    const hash = await bcrypt.hash(parsed.data.newPassword, 12);
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { passwordHash: hash }
+    });
+
+    await logAudit(req.user.id, 'PASSWORD_CHANGED', 'user', req.user.id, {}, getClientIp(req));
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/auth/microsoft/status - check if Microsoft SSO is configured
 router.get('/microsoft/status', async (req, res) => {
   try {
     const msConfig = await getMicrosoftConfig();
-    res.json({ configured: msConfig.isConfigured });
+    const forceSso = await prisma.setting.findUnique({ where: { key: 'force_sso_only' } });
+    res.json({ configured: msConfig.isConfigured, forceSsoOnly: forceSso?.value === 'true' });
   } catch (err) {
-    res.json({ configured: false });
+    res.json({ configured: false, forceSsoOnly: false });
   }
 });
 

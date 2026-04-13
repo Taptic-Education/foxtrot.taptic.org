@@ -44,6 +44,7 @@ router.get('/', authMiddleware, superAdminOnly, async (req, res) => {
 router.post('/invite', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
+    name: z.string().min(1).optional(),
     role: z.enum(['super_admin', 'cost_center_owner']).default('cost_center_owner'),
     costCenterIds: z.array(z.string()).optional()
   });
@@ -51,7 +52,7 @@ router.post('/invite', authMiddleware, superAdminOnly, writeLimiter, async (req,
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
 
-  const { email, role, costCenterIds } = parsed.data;
+  const { email, name: inviteName, role, costCenterIds } = parsed.data;
 
   try {
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
@@ -66,7 +67,7 @@ router.post('/invite', authMiddleware, superAdminOnly, writeLimiter, async (req,
       data: {
         email: email.toLowerCase(),
         passwordHash: '',
-        name: email.split('@')[0],
+        name: inviteName || email.split('@')[0],
         role,
         isActive: false,
         invitedBy: req.user.id,
@@ -95,6 +96,7 @@ router.post('/invite', authMiddleware, superAdminOnly, writeLimiter, async (req,
       id: user.id,
       email: user.email,
       role: user.role,
+      inviteLink,
       message: 'Invitation sent'
     });
   } catch (err) {

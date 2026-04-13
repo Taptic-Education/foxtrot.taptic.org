@@ -44,7 +44,12 @@ function SuperAdminDashboard() {
         api.get('/cost-centers').catch(() => ({ data: { data: [] } })),
       ]);
       setSummary(sumRes.data);
-      setRecentTx(txRes.data.data || txRes.data || []);
+      const rawTx = txRes.data.data || txRes.data || [];
+      setRecentTx(rawTx.map(t => ({
+        ...t,
+        date: t.createdAt,
+        costCenter: t.fromCostCenter || t.toCostCenter,
+      })));
       setCostCenters(ccRes.data.data || ccRes.data || []);
       setLastRefresh(new Date());
     } catch (e) {
@@ -170,6 +175,7 @@ function SuperAdminDashboard() {
       {/* Top Up Modal */}
       <TopUpModal
         isOpen={topUpModal}
+        costCenters={costCenters}
         onClose={() => setTopUpModal(false)}
         onSuccess={() => { fetchData(); addToast('Main fund topped up successfully'); }}
       />
@@ -202,7 +208,12 @@ function OwnerDashboard() {
         api.get('/transactions?limit=20').catch(() => ({ data: { data: [] } })),
       ]);
       setCostCenters(ccRes.data.data || ccRes.data || []);
-      setRecentTx(txRes.data.data || txRes.data || []);
+      const rawTx = txRes.data.data || txRes.data || [];
+      setRecentTx(rawTx.map(t => ({
+        ...t,
+        date: t.createdAt,
+        costCenter: t.fromCostCenter || t.toCostCenter,
+      })));
     } catch (e) {
       console.error(e);
     } finally {
@@ -228,7 +239,7 @@ function OwnerDashboard() {
 
   // Monthly spend data (mock shape)
   const monthlyData = recentTx
-    .filter((t) => t.type === 'PAYMENT')
+    .filter((t) => t.type === 'payment')
     .slice(0, 6)
     .map((t, i) => ({ name: `M${i + 1}`, amount: Math.abs(parseFloat(t.amount) || 0) }));
 
@@ -326,17 +337,23 @@ function OwnerDashboard() {
 }
 
 // ---- Modals ----
-function TopUpModal({ isOpen, onClose, onSuccess }) {
+function TopUpModal({ isOpen, costCenters: parentCostCenters, onClose, onSuccess }) {
   const [step, setStep] = useState(1);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useStore();
 
+  const mainFundId = (parentCostCenters || []).find(c => c.isMainFund)?.id || null;
+
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      await api.post('/transactions/top-up', { amount: parseFloat(amount), description });
+      await api.post('/transactions/top-up', {
+        toCostCenterId: mainFundId,
+        amount: parseFloat(amount),
+        description: description || 'Main fund top-up',
+      });
       onSuccess();
       onClose();
       setStep(1);
@@ -376,8 +393,8 @@ function TopUpModal({ isOpen, onClose, onSuccess }) {
           </div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="btn" onClick={() => setStep(2)} disabled={!amount || parseFloat(amount) <= 0}>
-              Review →
+            <button className="btn" onClick={() => setStep(2)} disabled={!mainFundId || !amount || parseFloat(amount) <= 0}>
+              {!mainFundId ? 'No main fund found' : 'Review →'}
             </button>
           </div>
         </div>
@@ -533,11 +550,10 @@ function RecordPaymentModal({ isOpen, costCenters, onClose, onSuccess }) {
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      await api.post('/payments', {
-        costCenterId: formData.costCenterId,
+      await api.post('/transactions/payment', {
+        fromCostCenterId: formData.costCenterId,
         amount: parseFloat(formData.amount),
-        description: formData.description,
-        payee: formData.payee,
+        description: formData.payee + (formData.description ? ' — ' + formData.description : ''),
       });
       onSuccess();
       onClose();
@@ -609,7 +625,8 @@ function RequestFundsModal({ isOpen, costCenters, onClose, onSuccess }) {
       await api.post('/fund-requests', {
         costCenterId: data.costCenterId,
         amount: parseFloat(data.amount),
-        reason: data.reason,
+        justification: data.reason,
+        urgency: data.urgency || 'medium',
       });
       onSuccess();
       onClose();
@@ -640,6 +657,14 @@ function RequestFundsModal({ isOpen, costCenters, onClose, onSuccess }) {
         <div className="input-group">
           <label className="input-label">Reason</label>
           <textarea className="input-field" {...register('reason', { required: true })} placeholder="Explain why funds are needed..." />
+        </div>
+        <div className="input-group">
+          <label className="input-label">Urgency</label>
+          <select className="input-field" {...register('urgency')}>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
         </div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>

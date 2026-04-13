@@ -16,7 +16,9 @@ const reportRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
 const setupRoutes = require('./routes/setup');
 const dashboardRoutes = require('./routes/dashboard');
+const scheduledTransferRoutes = require('./routes/scheduledTransfers');
 const { csrfProtection, apiLimiter } = require('./middleware/security');
+const { startScheduler } = require('./lib/scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +49,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/scheduled-transfers', scheduledTransferRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
@@ -59,4 +62,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Foxtrot API running on port ${PORT}`);
+  startScheduler();
 });

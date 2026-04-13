@@ -32,6 +32,7 @@ const schema = z.object({
   microsoft_client_id: z.string().optional(),
   microsoft_client_secret: z.string().optional(),
   microsoft_tenant_id: z.string().optional(),
+  force_sso_only: z.boolean().optional(),
   notify_on_payment: z.boolean().optional(),
   notify_on_fund_request: z.boolean().optional(),
   notify_on_transfer: z.boolean().optional(),
@@ -51,6 +52,7 @@ export default function Settings() {
     resolver: zodResolver(schema),
     defaultValues: {
       org_currency: 'ZAR',
+      force_sso_only: false,
       notify_on_payment: true,
       notify_on_fund_request: true,
       notify_on_transfer: true,
@@ -72,6 +74,7 @@ export default function Settings() {
           microsoft_client_id: d.microsoft_client_id || '',
           microsoft_client_secret: '', // always blank — masked on server
           microsoft_tenant_id: d.microsoft_tenant_id || '',
+          force_sso_only: d.force_sso_only === 'true',
           notify_on_payment: d.notify_on_payment === 'true',
           notify_on_fund_request: d.notify_on_fund_request === 'true',
           notify_on_transfer: d.notify_on_transfer === 'true',
@@ -95,6 +98,7 @@ export default function Settings() {
         microsoft_client_id: data.microsoft_client_id || '',
         microsoft_client_secret: data.microsoft_client_secret || '',
         microsoft_tenant_id: data.microsoft_tenant_id || '',
+        force_sso_only: data.force_sso_only ? 'true' : 'false',
         notify_on_payment: data.notify_on_payment ? 'true' : 'false',
         notify_on_fund_request: data.notify_on_fund_request ? 'true' : 'false',
         notify_on_transfer: data.notify_on_transfer ? 'true' : 'false',
@@ -254,6 +258,21 @@ export default function Settings() {
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx or common"
             />
           </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+            <input
+              type="checkbox"
+              id="force_sso_only"
+              {...register('force_sso_only')}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <label htmlFor="force_sso_only" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>
+              Force SSO only (disable password login)
+            </label>
+          </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 4, marginLeft: 28 }}>
+            When enabled, users must sign in with Microsoft. Invite accept &amp; password reset still work.
+          </p>
         </div>
 
         {/* ── Notifications ── */}

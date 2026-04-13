@@ -27,11 +27,20 @@ export default function Reports() {
       setIsLoading(true);
       try {
         const [monthlyRes, ccRes] = await Promise.all([
-          api.get(`/reports/monthly?year=${year}`).catch(() => ({ data: [] })),
-          api.get('/reports/cost-center-comparison').catch(() => ({ data: [] })),
+          api.get(`/reports/monthly-summary?year=${year}`).catch(() => ({ data: { data: [] } })),
+          api.get('/reports/cost-center-comparison').catch(() => ({ data: { data: [] } })),
         ]);
-        setSummary(monthlyRes.data || []);
-        setCostCenterData(ccRes.data || []);
+        const monthlyData = (monthlyRes.data?.data || []).map(m => ({
+          month: m.month,
+          spend: (m.payment || 0) + (m.transfer || 0),
+          topups: m.top_up || 0,
+        }));
+        setSummary(monthlyData);
+        setCostCenterData((ccRes.data?.data || []).map(cc => ({
+          name: cc.name,
+          spend: cc.totalSpend || 0,
+          balance: cc.balance || 0,
+        })));
       } catch (e) {
         addToast('Failed to load reports', 'error');
       } finally {

@@ -244,4 +244,52 @@ router.get('/:id/transactions', authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/cost-centers/:id/owners - add an owner to a cost center (super_admin only)
+router.post('/:id/owners', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
+  const schema = z.object({
+    userId: z.string().min(1)
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+
+  try {
+    const costCenter = await prisma.costCenter.findUnique({ where: { id: req.params.id } });
+    if (!costCenter) return res.status(404).json({ error: 'Cost center not found' });
+
+    const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const existing = await prisma.costCenterOwner.findFirst({
+      where: { costCenterId: req.params.id, userId: parsed.data.userId }
+    });
+    if (existing) return res.status(409).json({ error: 'User is already an owner of this cost center' });
+
+    await prisma.costCenterOwner.create({
+      data: {
+        costCenterId: req.params.id,
+        userId: parsed.data.userId,
+        assignedBy: req.user.id
+      }
+    });
+
+    await logAudit(req.user.id, 'COST_CENTER_OWNER_ADDED', 'cost_center', req.params.id,
+      { userId: parsed.data.userId }, getClientIp(req));
+
+    const refreshed = await prisma.costCenter.findUnique({
+      where: { id: req.params.id },
+      include: {
+        owners: {
+          include: { user: { select: { id: true, name: true, email: true } } }
+        }
+      }
+    });
+
+    res.status(201).json(refreshed);
+  } catch (err) {
+    console.error('Add owner error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

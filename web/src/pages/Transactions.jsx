@@ -32,7 +32,12 @@ export default function Transactions() {
       params.set('limit', '100');
 
       const res = await api.get(`/transactions?${params}`);
-      setTransactions(res.data.data || res.data || []);
+      const raw = res.data.data || res.data || [];
+      setTransactions(raw.map(t => ({
+        ...t,
+        date: t.createdAt,
+        costCenter: t.fromCostCenter || t.toCostCenter,
+      })));
     } catch (e) {
       addToast('Failed to load transactions', 'error');
     } finally {
@@ -89,10 +94,10 @@ export default function Transactions() {
           <div className="input-label" style={{ marginBottom: 4 }}>Type</div>
           <select className="input-field" style={{ marginBottom: 0 }} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="">All Types</option>
-            <option value="TOPUP">Top Up</option>
-            <option value="TRANSFER">Transfer</option>
-            <option value="PAYMENT">Payment</option>
-            <option value="ADJUSTMENT">Adjustment</option>
+            <option value="top_up">Top Up</option>
+            <option value="transfer">Transfer</option>
+            <option value="payment">Payment</option>
+            <option value="adjustment">Adjustment</option>
           </select>
         </div>
 

@@ -22,6 +22,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [msConfigured, setMsConfigured] = useState(false);
+  const [forceSsoOnly, setForceSsoOnly] = useState(false);
   const { login, fetchNotifications } = useStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -29,7 +30,10 @@ export default function Login() {
   useEffect(() => {
     // Check if Microsoft SSO is available
     api.get('/auth/microsoft/status')
-      .then((res) => setMsConfigured(res.data?.configured === true))
+      .then((res) => {
+        setMsConfigured(res.data?.configured === true);
+        setForceSsoOnly(res.data?.forceSsoOnly === true);
+      })
       .catch(() => {});
 
     // Show error from Microsoft redirect
@@ -117,43 +121,53 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="input-group">
-            <label className="input-label">Email</label>
-            <input
-              className={`input-field ${errors.email ? 'error' : ''}`}
-              type="email"
-              {...register('email')}
-              placeholder="you@company.com"
-              autoFocus
-            />
-            {errors.email && <span className="input-error">{errors.email.message}</span>}
-          </div>
+          {!forceSsoOnly && (
+            <>
+              <div className="input-group">
+                <label className="input-label">Email</label>
+                <input
+                  className={`input-field ${errors.email ? 'error' : ''}`}
+                  type="email"
+                  {...register('email')}
+                  placeholder="you@company.com"
+                  autoFocus
+                />
+                {errors.email && <span className="input-error">{errors.email.message}</span>}
+              </div>
 
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <input
-              className={`input-field ${errors.password ? 'error' : ''}`}
-              type="password"
-              {...register('password')}
-              placeholder="••••••••"
-            />
-            {errors.password && <span className="input-error">{errors.password.message}</span>}
-          </div>
+              <div className="input-group">
+                <label className="input-label">Password</label>
+                <input
+                  className={`input-field ${errors.password ? 'error' : ''}`}
+                  type="password"
+                  {...register('password')}
+                  placeholder="••••••••"
+                />
+                {errors.password && <span className="input-error">{errors.password.message}</span>}
+              </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24, marginTop: -12 }}>
-            <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
-              Forgot password?
-            </Link>
-          </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24, marginTop: -12 }}>
+                <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                  Forgot password?
+                </Link>
+              </div>
 
-          <button
-            type="submit"
-            className="btn"
-            disabled={isLoading}
-            style={{ width: '100%', justifyContent: 'center', marginBottom: 16 }}
-          >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
+              <button
+                type="submit"
+                className="btn"
+                disabled={isLoading}
+                style={{ width: '100%', justifyContent: 'center', marginBottom: 16 }}
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </>
+          )}
+
+          {forceSsoOnly && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 16, textAlign: 'center' }}>
+              Your organisation requires Microsoft SSO to sign in.
+            </p>
+          )}
 
           <button
             type="button"

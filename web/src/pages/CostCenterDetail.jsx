@@ -34,10 +34,15 @@ export default function CostCenterDetail() {
     try {
       const [ccRes, txRes] = await Promise.all([
         api.get(`/cost-centers/${id}`),
-        api.get(`/transactions?costCenterId=${id}&limit=50`),
+        api.get(`/cost-centers/${id}/transactions?limit=50`),
       ]);
       setCc(ccRes.data);
-      setTransactions(txRes.data.data || txRes.data || []);
+      const rawTx = txRes.data.data || txRes.data || [];
+      setTransactions(rawTx.map(t => ({
+        ...t,
+        date: t.createdAt,
+        costCenter: t.fromCostCenter || t.toCostCenter,
+      })));
     } catch (e) {
       addToast('Failed to load cost center', 'error');
       navigate('/cost-centers');
@@ -173,10 +178,10 @@ export default function CostCenterDetail() {
           onChange={(e) => setTypeFilter(e.target.value)}
         >
           <option value="">All Types</option>
-          <option value="TOPUP">Top Up</option>
-          <option value="TRANSFER">Transfer</option>
-          <option value="PAYMENT">Payment</option>
-          <option value="ADJUSTMENT">Adjustment</option>
+          <option value="top_up">Top Up</option>
+          <option value="transfer">Transfer</option>
+          <option value="payment">Payment</option>
+          <option value="adjustment">Adjustment</option>
         </select>
       </div>
 

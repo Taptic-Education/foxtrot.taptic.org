@@ -22,6 +22,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
 import Profile from './pages/Profile';
+import ScheduledTransfers from './pages/ScheduledTransfers';
 
 function ProtectedRoute({ children, roles }) {
   const { auth } = useStore();
@@ -129,6 +130,14 @@ export default function App() {
               element={
                 <ProtectedRoute roles={['super_admin']}>
                   <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="scheduled-transfers"
+              element={
+                <ProtectedRoute roles={['super_admin']}>
+                  <ScheduledTransfers />
                 </ProtectedRoute>
               }
             />

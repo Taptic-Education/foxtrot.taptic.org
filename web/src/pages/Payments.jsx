@@ -29,14 +29,21 @@ export default function Payments() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statusFilter) params.set('status', statusFilter);
-      if (ccFilter) params.set('costCenterId', ccFilter);
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
+      if (statusFilter === 'PENDING') params.set('bankPaid', 'false');
+      else if (statusFilter === 'PAID') params.set('bankPaid', 'true');
       params.set('limit', '100');
 
       const res = await api.get(`/payments?${params}`);
-      setPayments(res.data.data || res.data || []);
+      const raw = res.data.data || res.data || [];
+      setPayments(raw.map(p => ({
+        ...p,
+        date: p.transaction?.createdAt,
+        description: p.transaction?.description,
+        costCenter: p.transaction?.fromCostCenter,
+        amount: p.transaction?.amount,
+        status: p.bankPaid ? 'PAID' : 'PENDING',
+        payee: p.transaction?.creator?.name || '—',
+      })));
     } catch (e) {
       addToast('Failed to load payments', 'error');
     } finally {
@@ -48,12 +55,12 @@ export default function Payments() {
     api.get('/cost-centers').then((res) => setCostCenters(res.data.data || res.data || [])).catch(() => {});
   }, []);
 
-  useEffect(() => { fetchPayments(); }, [statusFilter, ccFilter, startDate, endDate]);
+  useEffect(() => { fetchPayments(); }, [statusFilter]);
 
   const markAsPaid = async () => {
     setIsSubmitting(true);
     try {
-      await api.patch(`/payments/${confirmPayment.id}/paid`);
+      await api.patch(`/payments/${confirmPayment.id}/mark-paid`);
       addToast('Payment marked as paid');
       setConfirmPayment(null);
       fetchPayments();
@@ -111,7 +118,6 @@ export default function Payments() {
             <option value="">All Statuses</option>
             <option value="PENDING">Pending</option>
             <option value="PAID">Paid</option>
-            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
 
