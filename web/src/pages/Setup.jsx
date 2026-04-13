@@ -12,9 +12,9 @@ const step1Schema = z.object({
 });
 
 const step2Schema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  email: z.string().email('Invalid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  adminName: z.string().min(2, 'Name is required'),
+  adminEmail: z.string().email('Invalid email'),
+  adminPassword: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 const pageVariants = {
@@ -153,38 +153,38 @@ export default function Setup() {
             <div className="input-group">
               <label className="input-label">Full Name</label>
               <input
-                className={`input-field ${form2.formState.errors.name ? 'error' : ''}`}
-                {...form2.register('name')}
+                className={`input-field ${form2.formState.errors.adminName ? 'error' : ''}`}
+                {...form2.register('adminName')}
                 placeholder="Jane Doe"
               />
-              {form2.formState.errors.name && (
-                <span className="input-error">{form2.formState.errors.name.message}</span>
+              {form2.formState.errors.adminName && (
+                <span className="input-error">{form2.formState.errors.adminName.message}</span>
               )}
             </div>
 
             <div className="input-group">
               <label className="input-label">Email</label>
               <input
-                className={`input-field ${form2.formState.errors.email ? 'error' : ''}`}
-                {...form2.register('email')}
+                className={`input-field ${form2.formState.errors.adminEmail ? 'error' : ''}`}
+                {...form2.register('adminEmail')}
                 type="email"
                 placeholder="admin@company.com"
               />
-              {form2.formState.errors.email && (
-                <span className="input-error">{form2.formState.errors.email.message}</span>
+              {form2.formState.errors.adminEmail && (
+                <span className="input-error">{form2.formState.errors.adminEmail.message}</span>
               )}
             </div>
 
             <div className="input-group">
               <label className="input-label">Password</label>
               <input
-                className={`input-field ${form2.formState.errors.password ? 'error' : ''}`}
-                {...form2.register('password')}
+                className={`input-field ${form2.formState.errors.adminPassword ? 'error' : ''}`}
+                {...form2.register('adminPassword')}
                 type="password"
                 placeholder="••••••••"
               />
-              {form2.formState.errors.password && (
-                <span className="input-error">{form2.formState.errors.password.message}</span>
+              {form2.formState.errors.adminPassword && (
+                <span className="input-error">{form2.formState.errors.adminPassword.message}</span>
               )}
             </div>
 
