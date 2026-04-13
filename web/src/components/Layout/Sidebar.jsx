@@ -28,7 +28,7 @@ const navItems = (role, notifications) => {
     { to: '/fund-requests', label: 'Fund Requests', icon: GitPullRequest, badge: notifications.pendingRequests },
   ];
 
-  if (role === 'SUPER_ADMIN') {
+  if (role === 'super_admin') {
     items.push(
       { to: '/payments', label: 'Payments', icon: CreditCard, badge: notifications.pendingPayments },
       { to: '/reports', label: 'Reports', icon: BarChart3 },

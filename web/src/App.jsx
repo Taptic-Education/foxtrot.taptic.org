@@ -87,7 +87,7 @@ export default function App() {
             <Route
               path="payments"
               element={
-                <ProtectedRoute roles={['SUPER_ADMIN']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <Payments />
                 </ProtectedRoute>
               }
@@ -96,7 +96,7 @@ export default function App() {
             <Route
               path="audit-log"
               element={
-                <ProtectedRoute roles={['SUPER_ADMIN']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <AuditLog />
                 </ProtectedRoute>
               }
@@ -104,7 +104,7 @@ export default function App() {
             <Route
               path="reports"
               element={
-                <ProtectedRoute roles={['SUPER_ADMIN']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <Reports />
                 </ProtectedRoute>
               }
@@ -112,7 +112,7 @@ export default function App() {
             <Route
               path="settings"
               element={
-                <ProtectedRoute roles={['SUPER_ADMIN']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <Settings />
                 </ProtectedRoute>
               }
@@ -120,7 +120,7 @@ export default function App() {
             <Route
               path="users"
               element={
-                <ProtectedRoute roles={['SUPER_ADMIN']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <Users />
                 </ProtectedRoute>
               }
