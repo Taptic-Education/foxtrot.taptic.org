@@ -153,6 +153,10 @@ model FundRequest {
   amount                 Decimal           @db.Decimal(15, 2)
   justification          String
   urgency                Urgency
+  beneficiaryName        String?           @map("beneficiary_name")
+  beneficiaryBank        String?           @map("beneficiary_bank")
+  beneficiaryAccount     String?           @map("beneficiary_account")
+  beneficiaryRef         String?           @map("beneficiary_ref")
   status                 FundRequestStatus @default(pending)
   reviewedBy             String?           @map("reviewed_by")
   reviewNote             String?           @map("review_note")

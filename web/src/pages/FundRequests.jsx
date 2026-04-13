@@ -25,7 +25,9 @@ export default function FundRequests() {
   const [costCenters, setCostCenters] = useState([]);
   const [reviewNote, setReviewNote] = useState('');
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: { urgency: 'medium' }
+  });
 
   const fetchRequests = async () => {
     try {
@@ -49,8 +51,12 @@ export default function FundRequests() {
       await api.post('/fund-requests', {
         costCenterId: data.costCenterId,
         amount: parseFloat(data.amount),
-        justification: data.reason,
+        justification: data.justification,
         urgency: data.urgency || 'medium',
+        beneficiaryName: data.beneficiaryName || undefined,
+        beneficiaryBank: data.beneficiaryBank || undefined,
+        beneficiaryAccount: data.beneficiaryAccount || undefined,
+        beneficiaryRef: data.beneficiaryRef || undefined,
       });
       addToast('Fund request submitted');
       setCreateModal(false);
@@ -89,7 +95,12 @@ export default function FundRequests() {
     { key: 'createdAt', label: 'Date', render: (v) => formatDate(v) },
     { key: 'costCenter', label: 'Cost Center', render: (v, row) => row.costCenter?.name || '—' },
     { key: 'requester', label: 'Requested By', render: (v, row) => row.requester?.name || '—' },
+    { key: 'beneficiaryName', label: 'Pay To', render: (v) => v || '—' },
     { key: 'justification', label: 'Reason' },
+    {
+      key: 'urgency', label: 'Urgency',
+      render: (v) => <span className={`badge ${v === 'high' ? 'badge-danger' : v === 'medium' ? 'badge-warning' : 'badge-info'}`}>{v}</span>,
+    },
     {
       key: 'status', label: 'Status',
       render: (v) => <span className={`badge ${getStatusBadgeClass(v)}`}>{v}</span>,
@@ -160,9 +171,32 @@ export default function FundRequests() {
             <label className="input-label">Amount</label>
             <input className="input-field" type="number" step="0.01" min="0.01" {...register('amount', { required: true })} placeholder="0.00" />
           </div>
+
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 8 }}>
+            <p style={{ fontWeight: 600, marginBottom: 12, fontSize: '0.875rem' }}>Payment Details</p>
+            <div className="input-group">
+              <label className="input-label">Beneficiary Name (who to pay)</label>
+              <input className="input-field" {...register('beneficiaryName')} placeholder="e.g. John Smith / Acme Ltd" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="input-group">
+                <label className="input-label">Bank Name</label>
+                <input className="input-field" {...register('beneficiaryBank')} placeholder="e.g. FNB, Standard Bank" />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Account Number</label>
+                <input className="input-field" {...register('beneficiaryAccount')} placeholder="Account number" />
+              </div>
+            </div>
+            <div className="input-group">
+              <label className="input-label">Payment Reference</label>
+              <input className="input-field" {...register('beneficiaryRef')} placeholder="Reference / invoice number (optional)" />
+            </div>
+          </div>
+
           <div className="input-group">
-            <label className="input-label">Reason</label>
-            <textarea className="input-field" {...register('reason', { required: true })} placeholder="Why are funds needed?" />
+            <label className="input-label">Reason / Justification</label>
+            <textarea className="input-field" {...register('justification', { required: true })} placeholder="Why are funds needed?" />
           </div>
           <div className="input-group">
             <label className="input-label">Urgency</label>
@@ -188,6 +222,18 @@ export default function FundRequests() {
         message={
           <div>
             <div>{`${confirmAction?.action === 'approve' ? 'Approve' : 'Reject'} fund request from ${confirmAction?.request?.requester?.name || 'user'}?`}</div>
+            {confirmAction?.request?.beneficiaryName && (
+              <div style={{
+                marginTop: 12, padding: 12, background: 'var(--bg-secondary)',
+                borderRadius: 8, fontSize: '0.85rem', lineHeight: 1.6
+              }}>
+                <strong>Payment Details</strong><br />
+                <span>Pay to: {confirmAction.request.beneficiaryName}</span><br />
+                {confirmAction.request.beneficiaryBank && <><span>Bank: {confirmAction.request.beneficiaryBank}</span><br /></>}
+                {confirmAction.request.beneficiaryAccount && <><span>Account: {confirmAction.request.beneficiaryAccount}</span><br /></>}
+                {confirmAction.request.beneficiaryRef && <span>Ref: {confirmAction.request.beneficiaryRef}</span>}
+              </div>
+            )}
             {confirmAction?.action === 'reject' && (
               <div className="input-group" style={{ marginTop: 16 }}>
                 <label className="input-label">Reason for rejection</label>
