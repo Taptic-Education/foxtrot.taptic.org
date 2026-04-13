@@ -1,11 +1,23 @@
+# Example Caddyfile for Foxtrot
+# The install.sh script generates the actual Caddyfile at /etc/caddy/Caddyfile.
+#
+# Without Cloudflare (Let's Encrypt HTTP challenge - default):
+#   Caddy automatically obtains a certificate via Let's Encrypt.
+#   Ensure port 80 is open and your domain's A record points to this server.
+#
+# With Cloudflare DNS challenge:
+#   Provide a Cloudflare API token during install to use DNS-based TLS.
+#   Requires Caddy to be rebuilt with the Cloudflare DNS plugin (handled by install.sh).
+
 {
     email admin@yourdomain.com
 }
 
 foxtrot.yourdomain.com {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
+    # Uncomment to use Cloudflare DNS challenge instead of Let's Encrypt HTTP:
+    # tls {
+    #     dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    # }
 
     handle /api/* {
         reverse_proxy localhost:3001

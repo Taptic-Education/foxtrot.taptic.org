@@ -24,8 +24,8 @@ fi
 # Collect config
 echo -e "${YELLOW}Configuration${NC}"
 read -p "Domain (e.g. foxtrot.yourdomain.com): " DOMAIN
-read -p "Cloudflare API Token: " CF_TOKEN
-read -p "Admin Email (for Caddy TLS): " ADMIN_EMAIL
+read -p "Cloudflare API Token (leave blank to use Let's Encrypt HTTP challenge): " CF_TOKEN
+read -p "Admin Email (for TLS certificates): " ADMIN_EMAIL
 
 # Generate secrets
 DB_PASSWORD=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 32)
@@ -45,26 +45,42 @@ if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/
   apt-get install -y docker-compose-plugin
 fi
 
-# Caddy with Cloudflare DNS plugin
+# Caddy installation
 if ! command -v caddy &> /dev/null; then
-  echo -e "${GREEN}Installing Caddy with Cloudflare plugin...${NC}"
+  echo -e "${GREEN}Installing Caddy...${NC}"
   apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
   apt-get update
   apt-get install -y caddy
+fi
 
-  # Replace with xcaddy build for cloudflare
-  if ! command -v xcaddy &> /dev/null; then
-    go_version="go1.22.1"
-    wget -q "https://go.dev/dl/${go_version}.linux-amd64.tar.gz" -O /opt/go.tar.gz
-    rm -rf /usr/local/go
-    tar -C /usr/local -xzf /opt/go.tar.gz
-    rm -f /opt/go.tar.gz
-    export PATH=$PATH:/usr/local/go/bin
-    go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-    ~/go/bin/xcaddy build --with github.com/caddy-dns/cloudflare --output /usr/bin/caddy
+# If Cloudflare token provided, ensure Caddy has the Cloudflare DNS module
+if [ -n "$CF_TOKEN" ]; then
+  if ! caddy list-modules 2>/dev/null | grep -q 'dns.providers.cloudflare'; then
+    echo -e "${GREEN}Building Caddy with Cloudflare DNS plugin...${NC}"
+    if ! command -v go &> /dev/null; then
+      go_version="go1.22.1"
+      wget -q "https://go.dev/dl/${go_version}.linux-amd64.tar.gz" -O /opt/go.tar.gz
+      rm -rf /usr/local/go
+      tar -C /usr/local -xzf /opt/go.tar.gz
+      rm -f /opt/go.tar.gz
+    fi
+    export PATH=$PATH:/usr/local/go/bin:${HOME}/go/bin
+    if ! command -v xcaddy &> /dev/null; then
+      go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+    fi
+    if ! command -v xcaddy &> /dev/null; then
+      echo -e "${RED}Failed to install xcaddy. Cannot build Caddy with Cloudflare plugin.${NC}"
+      exit 1
+    fi
+    systemctl stop caddy 2>/dev/null || true
+    xcaddy build --with github.com/caddy-dns/cloudflare --output /usr/bin/caddy
+    echo -e "${GREEN}Caddy rebuilt with Cloudflare DNS support.${NC}"
   fi
+else
+  echo -e "${YELLOW}No Cloudflare token provided. Caddy will use Let's Encrypt HTTP challenge.${NC}"
+  echo -e "${YELLOW}Make sure port 80 is open and your domain's A record points to this server.${NC}"
 fi
 
 # Clone / copy app
@@ -90,7 +106,8 @@ echo "DB_PASSWORD: ${DB_PASSWORD}"
 echo "JWT_SECRET: ${JWT_SECRET}"
 
 # Write Caddyfile
-cat > /etc/caddy/Caddyfile << EOF
+if [ -n "$CF_TOKEN" ]; then
+  cat > /etc/caddy/Caddyfile << EOF
 {
     email ${ADMIN_EMAIL}
 }
@@ -116,12 +133,38 @@ ${DOMAIN} {
 }
 EOF
 
-# Set CLOUDFLARE_API_TOKEN for Caddy systemd
-mkdir -p /etc/systemd/system/caddy.service.d
-cat > /etc/systemd/system/caddy.service.d/cloudflare.conf << EOF
+  # Set CLOUDFLARE_API_TOKEN for Caddy systemd
+  mkdir -p /etc/systemd/system/caddy.service.d
+  cat > /etc/systemd/system/caddy.service.d/cloudflare.conf << EOF
 [Service]
 Environment="CLOUDFLARE_API_TOKEN=${CF_TOKEN}"
 EOF
+else
+  cat > /etc/caddy/Caddyfile << EOF
+{
+    email ${ADMIN_EMAIL}
+}
+
+${DOMAIN} {
+    handle /api/* {
+        reverse_proxy localhost:3001
+    }
+
+    handle /uploads/* {
+        reverse_proxy localhost:3001
+    }
+
+    handle {
+        reverse_proxy localhost:3000
+    }
+
+    encode gzip
+}
+EOF
+
+  # Remove any leftover Cloudflare systemd override
+  rm -f /etc/systemd/system/caddy.service.d/cloudflare.conf
+fi
 
 systemctl daemon-reload
 
