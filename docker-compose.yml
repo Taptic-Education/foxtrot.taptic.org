@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: foxtrot
+      POSTGRES_USER: ${DB_USER:-foxtrot}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-foxtrot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - foxtrot-net
+
+  api:
+    build: 
+      context: ./api
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-foxtrot}:${DB_PASSWORD}@db:5432/foxtrot
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
+      APP_URL: ${APP_URL:-http://localhost}
+      PORT: 3001
+      NODE_ENV: production
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    networks:
+      - foxtrot-net
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${APP_URL:-http://localhost}
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    networks:
+      - foxtrot-net
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  foxtrot-net:
+    driver: bridge

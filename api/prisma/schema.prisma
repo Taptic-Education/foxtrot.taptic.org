@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         Role     @default(cost_center_owner)
+  isActive     Boolean  @default(true) @map("is_active")
+  invitedBy    String?  @map("invited_by")
+  inviteToken  String?  @unique @map("invite_token")
+  inviteExpiry DateTime? @map("invite_expiry")
+  resetToken   String?  @unique @map("reset_token")
+  resetExpiry  DateTime? @map("reset_expiry")
+  microsoftId  String?  @unique @map("microsoft_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  inviter              User?             @relation("UserInvites", fields: [invitedBy], references: [id])
+  invitees             User[]            @relation("UserInvites")
+  costCenterOwners     CostCenterOwner[] @relation("UserCostCenters")
+  assignedCostCenters  CostCenterOwner[] @relation("AssignedBy")
+  transactions         Transaction[]
+  fundRequests         FundRequest[]     @relation("FundRequestUser")
+  reviewedRequests     FundRequest[]     @relation("FundRequestReviewer")
+  bankPaidPayments     Payment[]
+  auditLogs            AuditLog[]
+  updatedSettings      Setting[]
+  refreshTokens        RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+enum Role {
+  super_admin
+  cost_center_owner
+}
+
+model CostCenter {
+  id                  String   @id @default(uuid())
+  name                String
+  description         String?
+  balance             Decimal  @default(0) @db.Decimal(15, 2)
+  isMainFund          Boolean  @default(false) @map("is_main_fund")
+  status              CostCenterStatus @default(active)
+  lowBalanceThreshold Decimal  @default(0) @map("low_balance_threshold") @db.Decimal(15, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  owners               CostCenterOwner[]
+  outgoingTransactions Transaction[]     @relation("FromCostCenter")
+  incomingTransactions Transaction[]     @relation("ToCostCenter")
+  fundRequests         FundRequest[]
+
+  @@map("cost_centers")
+}
+
+enum CostCenterStatus {
+  active
+  archived
+}
+
+model CostCenterOwner {
+  id           String   @id @default(uuid())
+  costCenterId String   @map("cost_center_id")
+  userId       String   @map("user_id")
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+  assignedBy   String   @map("assigned_by")
+
+  costCenter   CostCenter @relation(fields: [costCenterId], references: [id])
+  user         User       @relation("UserCostCenters", fields: [userId], references: [id])
+  assigner     User       @relation("AssignedBy", fields: [assignedBy], references: [id])
+
+  @@unique([costCenterId, userId])
+  @@map("cost_center_owners")
+}
+
+model Transaction {
+  id               String          @id @default(uuid())
+  type             TransactionType
+  amount           Decimal         @db.Decimal(15, 2)
+  currency         String          @default("ZAR")
+  fromCostCenterId String?         @map("from_cost_center_id")
+  toCostCenterId   String?         @map("to_cost_center_id")
+  description      String
+  reference        String?
+  status           TransactionStatus @default(completed)
+  createdBy        String          @map("created_by")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  fromCostCenter   CostCenter?     @relation("FromCostCenter", fields: [fromCostCenterId], references: [id])
+  toCostCenter     CostCenter?     @relation("ToCostCenter", fields: [toCostCenterId], references: [id])
+  creator          User            @relation(fields: [createdBy], references: [id])
+  payment          Payment?
+  fundRequest      FundRequest?
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  top_up
+  transfer
+  payment
+  adjustment
+}
+
+enum TransactionStatus {
+  completed
+  pending
+  cancelled
+}
+
+model Payment {
+  id            String    @id @default(uuid())
+  transactionId String    @unique @map("transaction_id")
+  bankPaid      Boolean   @default(false) @map("bank_paid")
+  bankPaidAt    DateTime? @map("bank_paid_at")
+  bankPaidBy    String?   @map("bank_paid_by")
+  notes         String?
+
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  paidByUser    User?       @relation(fields: [bankPaidBy], references: [id])
+
+  @@map("payments")
+}
+
+model FundRequest {
+  id                     String            @id @default(uuid())
+  costCenterId           String            @map("cost_center_id")
+  requestedBy            String            @map("requested_by")
+  amount                 Decimal           @db.Decimal(15, 2)
+  justification          String
+  urgency                Urgency
+  status                 FundRequestStatus @default(pending)
+  reviewedBy             String?           @map("reviewed_by")
+  reviewNote             String?           @map("review_note")
+  resultingTransactionId String?           @unique @map("resulting_transaction_id")
+  createdAt              DateTime          @default(now()) @map("created_at")
+  updatedAt              DateTime          @updatedAt @map("updated_at")
+
+  costCenter             CostCenter        @relation(fields: [costCenterId], references: [id])
+  requester              User              @relation("FundRequestUser", fields: [requestedBy], references: [id])
+  reviewer               User?             @relation("FundRequestReviewer", fields: [reviewedBy], references: [id])
+  resultingTransaction   Transaction?      @relation(fields: [resultingTransactionId], references: [id])
+
+  @@map("fund_requests")
+}
+
+enum Urgency {
+  low
+  medium
+  high
+}
+
+enum FundRequestStatus {
+  pending
+  approved
+  rejected
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  details    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_log")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  updater   User?    @relation(fields: [updatedBy], references: [id])
+
+  @@map("settings")
+}
