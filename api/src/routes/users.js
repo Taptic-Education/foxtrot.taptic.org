@@ -104,7 +104,7 @@ router.post('/invite', authMiddleware, superAdminOnly, writeLimiter, async (req,
 });
 
 // PATCH /api/users/:id - update user (super_admin only)
-router.patch('/:id', authMiddleware, superAdminOnly, async (req, res) => {
+router.patch('/:id', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     name: z.string().min(1).optional(),
     role: z.enum(['super_admin', 'cost_center_owner']).optional(),
@@ -151,7 +151,7 @@ router.patch('/:id', authMiddleware, superAdminOnly, async (req, res) => {
 });
 
 // DELETE /api/users/:id - deactivate user (super_admin only)
-router.delete('/:id', authMiddleware, superAdminOnly, async (req, res) => {
+router.delete('/:id', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   try {
     if (req.params.id === req.user.id) {
       return res.status(400).json({ error: 'Cannot deactivate your own account' });
