@@ -86,7 +86,7 @@ router.post('/invite', authMiddleware, superAdminOnly, writeLimiter, async (req,
       });
     }
 
-    const inviteLink = `${process.env.APP_URL}/invite?token=${token}`;
+    const inviteLink = `${process.env.APP_URL}/invite/accept?token=${token}`;
     await sendInviteEmail(email, inviteLink, inviter?.name || 'An admin');
 
     await logAudit(req.user.id, 'USER_INVITED', 'user', user.id, { email, role }, getClientIp(req));

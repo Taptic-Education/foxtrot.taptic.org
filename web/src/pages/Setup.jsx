@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -33,6 +33,12 @@ export default function Setup() {
   const form1 = useForm({ resolver: zodResolver(step1Schema), defaultValues: { currency: 'ZAR' } });
   const form2 = useForm({ resolver: zodResolver(step2Schema) });
 
+  useEffect(() => {
+    api.get('/setup/status').then((res) => {
+      if (!res.data.needsSetup) navigate('/login', { replace: true });
+    }).catch(() => {});
+  }, []);
+
   const onStep1 = (data) => {
     setStep1Data(data);
     setStep(2);
@@ -45,9 +51,9 @@ export default function Setup() {
       await api.post('/setup', {
         orgName: step1Data.orgName,
         currency: step1Data.currency,
-        adminName: data.name,
-        adminEmail: data.email,
-        adminPassword: data.password,
+        adminName: data.adminName,
+        adminEmail: data.adminEmail,
+        adminPassword: data.adminPassword,
       });
       setStep(3);
     } catch (e) {

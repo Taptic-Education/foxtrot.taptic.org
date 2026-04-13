@@ -54,6 +54,13 @@ export default function App() {
     const saved = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);
 
+    // Skip auth check on public pages
+    const publicPaths = ['/setup', '/login', '/forgot-password', '/reset-password', '/invite/accept'];
+    if (publicPaths.some((p) => window.location.pathname.startsWith(p))) {
+      useStore.setState({ auth: { user: null, isLoading: false } });
+      return;
+    }
+
     fetchMe().then((user) => {
       if (user) fetchNotifications();
     });
@@ -63,7 +70,7 @@ export default function App() {
     <>
       <Toast />
       <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
+        <Routes location={location}>
           {/* Public routes */}
           <Route path="/setup" element={<Setup />} />
           <Route path="/login" element={<Login />} />
