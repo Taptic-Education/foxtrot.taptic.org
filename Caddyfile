@@ -1,0 +1,29 @@
+{
+    email admin@yourdomain.com
+}
+
+foxtrot.yourdomain.com {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    handle /api/* {
+        reverse_proxy localhost:3001
+    }
+
+    handle /uploads/* {
+        reverse_proxy localhost:3001
+    }
+
+    handle {
+        reverse_proxy localhost:3000
+    }
+
+    encode gzip
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
