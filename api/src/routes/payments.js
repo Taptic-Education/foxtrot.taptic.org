@@ -3,6 +3,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { logAudit } = require('../lib/audit');
 const { authMiddleware, superAdminOnly, getClientIp } = require('../middleware/auth');
+const { writeLimiter } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -48,7 +49,7 @@ router.get('/', authMiddleware, superAdminOnly, async (req, res) => {
 });
 
 // PATCH /api/payments/:id/mark-paid - mark payment as paid from bank (super_admin only)
-router.patch('/:id/mark-paid', authMiddleware, superAdminOnly, async (req, res) => {
+router.patch('/:id/mark-paid', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     notes: z.string().optional()
   });

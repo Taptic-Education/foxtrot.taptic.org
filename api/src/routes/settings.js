@@ -3,6 +3,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { logAudit } = require('../lib/audit');
 const { authMiddleware, superAdminOnly, getClientIp } = require('../middleware/auth');
+const { writeLimiter } = require('../middleware/security');
 const { sendEmail, emailTemplate } = require('../lib/email');
 
 const router = express.Router();
@@ -35,7 +36,7 @@ router.get('/', authMiddleware, superAdminOnly, async (req, res) => {
 });
 
 // PATCH /api/settings - update settings (super_admin only)
-router.patch('/', authMiddleware, superAdminOnly, async (req, res) => {
+router.patch('/', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     org_name: z.string().min(1).optional(),
     org_currency: z.string().min(1).optional(),

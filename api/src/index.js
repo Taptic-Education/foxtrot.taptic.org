@@ -15,6 +15,7 @@ const auditRoutes = require('./routes/audit');
 const reportRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
 const setupRoutes = require('./routes/setup');
+const { csrfProtection, apiLimiter } = require('./middleware/security');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,8 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+app.use(apiLimiter);
+app.use(csrfProtection);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api/auth', authRoutes);

@@ -3,6 +3,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { logAudit } = require('../lib/audit');
 const { authMiddleware, superAdminOnly, getClientIp } = require('../middleware/auth');
+const { writeLimiter } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // POST /api/cost-centers - create cost center (super_admin only)
-router.post('/', authMiddleware, superAdminOnly, async (req, res) => {
+router.post('/', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     name: z.string().min(1),
     description: z.string().optional(),
@@ -110,7 +111,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // PATCH /api/cost-centers/:id - update cost center (super_admin only)
-router.patch('/:id', authMiddleware, superAdminOnly, async (req, res) => {
+router.patch('/:id', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     name: z.string().min(1).optional(),
     description: z.string().optional(),

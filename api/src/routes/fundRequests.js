@@ -3,6 +3,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { logAudit } = require('../lib/audit');
 const { authMiddleware, superAdminOnly, getClientIp } = require('../middleware/auth');
+const { writeLimiter } = require('../middleware/security');
 const { sendFundRequestEmail, sendFundRequestReviewedEmail } = require('../lib/email');
 
 const router = express.Router();
@@ -66,7 +67,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // POST /api/fund-requests - submit a fund request
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, writeLimiter, async (req, res) => {
   const schema = z.object({
     costCenterId: z.string().min(1),
     amount: z.number().positive(),
@@ -129,7 +130,7 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // PATCH /api/fund-requests/:id/approve (super_admin only)
-router.patch('/:id/approve', authMiddleware, superAdminOnly, async (req, res) => {
+router.patch('/:id/approve', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     reviewNote: z.string().optional(),
     transferFromCostCenterId: z.string().optional()
@@ -217,7 +218,7 @@ router.patch('/:id/approve', authMiddleware, superAdminOnly, async (req, res) =>
 });
 
 // PATCH /api/fund-requests/:id/reject (super_admin only)
-router.patch('/:id/reject', authMiddleware, superAdminOnly, async (req, res) => {
+router.patch('/:id/reject', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     reviewNote: z.string().min(1)
   });

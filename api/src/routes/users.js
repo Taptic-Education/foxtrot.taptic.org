@@ -5,6 +5,7 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { logAudit } = require('../lib/audit');
 const { authMiddleware, superAdminOnly, getClientIp } = require('../middleware/auth');
+const { writeLimiter } = require('../middleware/security');
 const { sendInviteEmail } = require('../lib/email');
 
 const router = express.Router();
@@ -40,7 +41,7 @@ router.get('/', authMiddleware, superAdminOnly, async (req, res) => {
 });
 
 // POST /api/users/invite - invite a user (super_admin only)
-router.post('/invite', authMiddleware, superAdminOnly, async (req, res) => {
+router.post('/invite', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
     role: z.enum(['super_admin', 'cost_center_owner']).default('cost_center_owner'),

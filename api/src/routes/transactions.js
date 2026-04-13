@@ -3,11 +3,8 @@ const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { logAudit } = require('../lib/audit');
 const { authMiddleware, superAdminOnly, getClientIp } = require('../middleware/auth');
-const {
-  sendFundsTransferredEmail,
-  sendPaymentRecordedEmail,
-  sendLowBalanceEmail
-} = require('../lib/email');
+const { writeLimiter } = require('../middleware/security');
+const { sendFundsTransferredEmail, sendPaymentRecordedEmail, sendLowBalanceEmail } = require('../lib/email');
 
 const router = express.Router();
 
@@ -41,7 +38,7 @@ async function checkAndNotifyLowBalance(costCenter) {
 }
 
 // POST /api/transactions/top-up (super_admin only)
-router.post('/top-up', authMiddleware, superAdminOnly, async (req, res) => {
+router.post('/top-up', authMiddleware, superAdminOnly, writeLimiter, async (req, res) => {
   const schema = z.object({
     toCostCenterId: z.string().min(1),
     amount: z.number().positive(),
@@ -97,7 +94,7 @@ router.post('/top-up', authMiddleware, superAdminOnly, async (req, res) => {
 });
 
 // POST /api/transactions/transfer
-router.post('/transfer', authMiddleware, async (req, res) => {
+router.post('/transfer', authMiddleware, writeLimiter, async (req, res) => {
   const schema = z.object({
     fromCostCenterId: z.string().min(1),
     toCostCenterId: z.string().min(1),
@@ -191,7 +188,7 @@ router.post('/transfer', authMiddleware, async (req, res) => {
 });
 
 // POST /api/transactions/payment
-router.post('/payment', authMiddleware, async (req, res) => {
+router.post('/payment', authMiddleware, writeLimiter, async (req, res) => {
   const schema = z.object({
     fromCostCenterId: z.string().min(1),
     amount: z.number().positive(),
