@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useStore } from '../lib/store';
+import api from '../lib/api';
 
 const schema = z.object({
   email: z.string().email('Invalid email'),
@@ -20,8 +21,33 @@ const pageVariants = {
 export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [msConfigured, setMsConfigured] = useState(false);
   const { login, fetchNotifications } = useStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Check if Microsoft SSO is available
+    api.get('/auth/microsoft/status')
+      .then((res) => setMsConfigured(res.data?.configured === true))
+      .catch(() => {});
+
+    // Show error from Microsoft redirect
+    const msError = searchParams.get('error');
+    if (msError) {
+      const messages = {
+        microsoft_auth_failed: 'Microsoft authentication failed. Please try again.',
+        microsoft_not_configured: 'Microsoft SSO is not configured. Contact your admin.',
+        microsoft_token_failed: 'Could not verify Microsoft credentials. Please try again.',
+        microsoft_profile_failed: 'Could not retrieve your Microsoft profile.',
+        microsoft_no_email: 'No email found on your Microsoft account.',
+        microsoft_no_account: 'No Foxtrot account matches your Microsoft email. Ask your admin to invite you first.',
+        account_disabled: 'Your account has been disabled.',
+        microsoft_auth_error: 'An unexpected error occurred during Microsoft sign-in.',
+      };
+      setError(messages[msError] || 'Authentication failed.');
+    }
+  }, [searchParams]);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -132,7 +158,7 @@ export default function Login() {
           <button
             type="button"
             className="btn btn-ghost"
-            style={{ width: '100%', justifyContent: 'center' }}
+            style={{ width: '100%', justifyContent: 'center', display: msConfigured ? 'flex' : 'none' }}
             onClick={() => window.location.href = '/api/auth/microsoft'}
           >
             Sign in with Microsoft

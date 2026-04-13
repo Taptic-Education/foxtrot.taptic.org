@@ -67,11 +67,8 @@ cp .env.example .env
 | `DB_PASSWORD` | PostgreSQL password (generate a strong one) |
 | `JWT_SECRET` | JWT signing secret (min 32 characters) |
 | `APP_URL` | Your app URL (e.g. `https://foxtrot.yourdomain.com`) |
-| `RESEND_API_KEY` | Resend API key for email notifications |
-| `RESEND_FROM_EMAIL` | From address for emails |
-| `MICROSOFT_CLIENT_ID` | Azure AD app client ID (optional, for SSO) |
-| `MICROSOFT_CLIENT_SECRET` | Azure AD app secret (optional) |
-| `MICROSOFT_TENANT_ID` | Azure AD tenant ID (optional) |
+
+> **Note:** Resend API key, from-email address, and Microsoft SSO credentials (Client ID, Secret, Tenant ID) are all configured by the Super Admin through **Settings** in the web UI after first login. No need to set them as environment variables.
 
 ### Microsoft SSO Setup (Optional)
 
@@ -80,7 +77,7 @@ cp .env.example .env
 3. Set redirect URI to `https://yourdomain.com/api/auth/microsoft/callback`
 4. Note the **Client ID** and **Tenant ID**
 5. Create a client secret under "Certificates & secrets"
-6. Add these to your `.env`
+6. Log in to Foxtrot as Super Admin → **Settings** → enter the Microsoft SSO credentials there
 
 ### Cloudflare + Caddy Setup
 

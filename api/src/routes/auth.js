@@ -8,6 +8,7 @@ const prisma = require('../lib/prisma');
 const { sendPasswordResetEmail, sendInviteEmail } = require('../lib/email');
 const { logAudit } = require('../lib/audit');
 const { authMiddleware, getClientIp } = require('../middleware/auth');
+const { getMicrosoftConfig } = require('../lib/microsoftAuth');
 
 const router = express.Router();
 
@@ -255,6 +256,134 @@ router.post('/logout-all', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Logout all error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/auth/microsoft - redirect to Microsoft OAuth
+router.get('/microsoft', async (req, res) => {
+  try {
+    const msConfig = await getMicrosoftConfig();
+    if (!msConfig.isConfigured) {
+      return res.status(400).json({ error: 'Microsoft SSO is not configured. Ask your admin to set it up in Settings.' });
+    }
+
+    const state = crypto.randomBytes(16).toString('hex');
+    const redirectUri = `${process.env.APP_URL}/api/auth/microsoft/callback`;
+    const authorizeUrl = `https://login.microsoftonline.com/${msConfig.tenantId}/oauth2/v2.0/authorize`
+      + `?client_id=${encodeURIComponent(msConfig.clientId)}`
+      + `&response_type=code`
+      + `&redirect_uri=${encodeURIComponent(redirectUri)}`
+      + `&response_mode=query`
+      + `&scope=${encodeURIComponent('openid profile email User.Read')}`
+      + `&state=${state}`;
+
+    res.redirect(authorizeUrl);
+  } catch (err) {
+    console.error('Microsoft auth redirect error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/auth/microsoft/callback - handle Microsoft OAuth callback
+router.get('/microsoft/callback', async (req, res) => {
+  const { code, error: msError } = req.query;
+
+  if (msError || !code) {
+    return res.redirect(`${process.env.APP_URL || ''}/login?error=microsoft_auth_failed`);
+  }
+
+  try {
+    const msConfig = await getMicrosoftConfig();
+    if (!msConfig.isConfigured) {
+      return res.redirect(`${process.env.APP_URL || ''}/login?error=microsoft_not_configured`);
+    }
+
+    const redirectUri = `${process.env.APP_URL}/api/auth/microsoft/callback`;
+
+    // Exchange code for tokens
+    const tokenRes = await fetch(`https://login.microsoftonline.com/${msConfig.tenantId}/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: msConfig.clientId,
+        client_secret: msConfig.clientSecret,
+        code,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+        scope: 'openid profile email User.Read'
+      })
+    });
+
+    if (!tokenRes.ok) {
+      console.error('Microsoft token exchange failed:', await tokenRes.text());
+      return res.redirect(`${process.env.APP_URL || ''}/login?error=microsoft_token_failed`);
+    }
+
+    const tokenData = await tokenRes.json();
+
+    // Fetch user profile
+    const profileRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+    });
+
+    if (!profileRes.ok) {
+      console.error('Microsoft profile fetch failed:', await profileRes.text());
+      return res.redirect(`${process.env.APP_URL || ''}/login?error=microsoft_profile_failed`);
+    }
+
+    const profile = await profileRes.json();
+    const email = (profile.mail || profile.userPrincipalName || '').toLowerCase();
+    const name = profile.displayName || email;
+    const microsoftId = profile.id;
+
+    if (!email) {
+      return res.redirect(`${process.env.APP_URL || ''}/login?error=microsoft_no_email`);
+    }
+
+    // Find or match user
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ microsoftId }, { email }] }
+    });
+
+    if (!user) {
+      return res.redirect(`${process.env.APP_URL || ''}/login?error=microsoft_no_account`);
+    }
+
+    if (!user.isActive) {
+      return res.redirect(`${process.env.APP_URL || ''}/login?error=account_disabled`);
+    }
+
+    // Link Microsoft ID if not already linked
+    if (!user.microsoftId) {
+      await prisma.user.update({ where: { id: user.id }, data: { microsoftId } });
+    }
+
+    // Issue tokens
+    const { accessToken, refreshToken } = generateTokens(user);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await prisma.refreshToken.create({
+      data: { userId: user.id, token: refreshToken, expiresAt }
+    });
+
+    setTokenCookies(res, accessToken, refreshToken);
+
+    await logAudit(user.id, 'LOGIN_MICROSOFT', 'user', user.id, { email, microsoftId }, getClientIp(req));
+
+    // Redirect to the app
+    res.redirect(process.env.APP_URL || '/');
+  } catch (err) {
+    console.error('Microsoft callback error:', err);
+    res.redirect(`${process.env.APP_URL || ''}/login?error=microsoft_auth_error`);
+  }
+});
+
+// GET /api/auth/microsoft/status - check if Microsoft SSO is configured
+router.get('/microsoft/status', async (req, res) => {
+  try {
+    const msConfig = await getMicrosoftConfig();
+    res.json({ configured: msConfig.isConfigured });
+  } catch (err) {
+    res.json({ configured: false });
   }
 });
 

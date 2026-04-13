@@ -83,9 +83,6 @@ DB_USER=foxtrot
 DB_PASSWORD=${DB_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
 APP_URL=https://${DOMAIN}
-RESEND_API_KEY=
-RESEND_FROM_EMAIL=foxtrot@${DOMAIN}
-CLOUDFLARE_API_TOKEN=${CF_TOKEN}
 EOF
 
 echo -e "${GREEN}Generated .env (keep this safe!)${NC}"
