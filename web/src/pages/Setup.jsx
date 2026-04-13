@@ -42,7 +42,13 @@ export default function Setup() {
     setIsLoading(true);
     setError('');
     try {
-      await api.post('/setup', { ...step1Data, ...data });
+      await api.post('/setup', {
+        orgName: step1Data.orgName,
+        currency: step1Data.currency,
+        adminName: data.name,
+        adminEmail: data.email,
+        adminPassword: data.password,
+      });
       setStep(3);
     } catch (e) {
       setError(e.response?.data?.error || 'Setup failed');
