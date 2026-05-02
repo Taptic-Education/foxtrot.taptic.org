@@ -98,7 +98,24 @@ router.post('/', authMiddleware, writeLimiter, async (req, res) => {
 
     const requester = await prisma.user.findUnique({ where: { id: req.user.id } });
 
-    
+    const request = await prisma.fundRequest.create({
+      data: {
+        costCenterId,
+        requestedBy: req.user.id,
+        amount,
+        justification,
+        urgency,
+        beneficiaryName: beneficiaryName || null,
+        beneficiaryBank: beneficiaryBank || null,
+        beneficiaryAccount: beneficiaryAccount || null,
+        beneficiaryBranchCode: beneficiaryBranchCode || null,
+        beneficiaryRef: beneficiaryRef || null
+      },
+      include: {
+        costCenter: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } }
+      }
+    });
 
     const notifyFundRequest = await getSetting('notify_on_fund_request');
     if (notifyFundRequest !== 'false') {
